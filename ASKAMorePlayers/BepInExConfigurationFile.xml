@@ -4,6 +4,6 @@
       $(AppData) resolves to C:\Users\YOUR_USER\AppData\Roaming
       So we just append the rest of the path.
     -->
-    <BepInExPath>$(AppData)\r2modmanPlus-local\ASKA\profiles\Default\BepInEx</BepInExPath>
+    <BepInExPath>C:\Program Files (x86)\Steam\steamapps\common\ASKA\BepInEx</BepInExPath>
   </PropertyGroup>
 </Project>

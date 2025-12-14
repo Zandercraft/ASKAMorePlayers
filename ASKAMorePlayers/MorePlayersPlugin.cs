@@ -44,15 +44,13 @@ namespace ASKAMorePlayers
             var harmony = new Harmony(PluginInfo.PLUGIN_GUID);
             harmony.PatchAll();
         }
-    }
-
-    /// <summary>
-    /// Patches the <see cref="NetworkRunner.StartGame"/> method to increase the session's player limit.
-    /// </summary>
-    [HarmonyPatch(typeof(NetworkRunner), nameof(NetworkRunner.StartGame))]
-    public static class PlayerCountPatch
-    {
-        private static int GetMaxPlayersFromConfigFile()
+        
+        /// <summary>
+        /// Manually parses the config file to ensure the correct value is available at startup,
+        /// avoiding race conditions with BepInEx's config loading.
+        /// </summary>
+        /// <returns>The configured maximum number of players.</returns>
+        public static int GetMaxPlayersFromConfigFile()
         {
             const int defaultValue = 10;
             try
@@ -60,14 +58,14 @@ namespace ASKAMorePlayers
                 var configPath = Path.Combine(Paths.ConfigPath, $"{PluginInfo.PLUGIN_GUID}.cfg");
                 if (!File.Exists(configPath))
                 {
-                    MorePlayersPlugin.Instance.Log.LogWarning($"Config file not found at {configPath}. Using default value: {defaultValue}");
+                    Instance.Log.LogWarning($"Config file not found at {configPath}. Using default value: {defaultValue}");
                     return defaultValue;
                 }
 
                 var line = File.ReadLines(configPath).FirstOrDefault(l => l.Trim().StartsWith("MaxPlayers"));
                 if (line == null)
                 {
-                    MorePlayersPlugin.Instance.Log.LogWarning($"'MaxPlayers' not found in config file. Using default value: {defaultValue}");
+                    Instance.Log.LogWarning($"'MaxPlayers' not found in config file. Using default value: {defaultValue}");
                     return defaultValue;
                 }
 
@@ -77,16 +75,23 @@ namespace ASKAMorePlayers
                     return parsedValue;
                 }
                 
-                MorePlayersPlugin.Instance.Log.LogWarning($"Failed to parse '{valueString}' as an integer. Using default value: {defaultValue}");
+                Instance.Log.LogWarning($"Failed to parse '{valueString}' as an integer. Using default value: {defaultValue}");
                 return defaultValue;
             }
             catch (System.Exception e)
             {
-                MorePlayersPlugin.Instance.Log.LogError($"Error reading config file manually: {e}. Using default value: {defaultValue}");
+                Instance.Log.LogError($"Error reading config file manually: {e}. Using default value: {defaultValue}");
                 return defaultValue;
             }
         }
+    }
 
+    /// <summary>
+    /// Patches the <see cref="NetworkRunner.StartGame"/> method to increase the session's player limit.
+    /// </summary>
+    [HarmonyPatch(typeof(NetworkRunner), nameof(NetworkRunner.StartGame))]
+    public static class PlayerCountPatch
+    {
         /// <summary>
         /// A Harmony prefix patch that modifies the <see cref="StartGameArgs"/> before the original method is executed.
         /// </summary>
@@ -95,10 +100,10 @@ namespace ASKAMorePlayers
         public static void Prefix(ref StartGameArgs args)
         {
             // Manually parse the config file to win the race condition on server startup.
-            var maxPlayers = GetMaxPlayersFromConfigFile();
+            var maxPlayers = MorePlayersPlugin.GetMaxPlayersFromConfigFile();
             
-            // The PlayerCount property includes the host. The server browser displays client slots.
-            // We add 1 to our desired value to ensure the correct number of client slots are shown.
+            // The PlayerCount property includes the host.
+            // We add 1 to our desired value to ensure the correct number of client slots are available.
             var sessionCapacity = maxPlayers + 1;
 
             args.PlayerCount = new Nullable<int>(sessionCapacity);
@@ -121,7 +126,25 @@ namespace ASKAMorePlayers
         // ReSharper disable once InconsistentNaming
         public static void Postfix(ref int __result)
         {
-            __result = MorePlayersPlugin.MaxPlayersConfig.Value;
+            // Ensure PlayerManager also accounts for the host to avoid logic mismatches
+            __result = MorePlayersPlugin.GetMaxPlayersFromConfigFile() + 1;
+        }
+    }
+
+    /// <summary>
+    /// Patches the <see cref="NetworkCuller.Awake"/> method to update its internal player count early.
+    /// </summary>
+    [HarmonyPatch(typeof(NetworkCuller), "Awake")]
+    public static class NetworkCuller_Awake_Patch
+    {
+        [HarmonyPrefix]
+        // ReSharper disable once InconsistentNaming
+        public static void Prefix(NetworkCuller __instance)
+        {
+            var maxPlayers = MorePlayersPlugin.GetMaxPlayersFromConfigFile();
+            var totalCapacity = maxPlayers + 1;
+            MorePlayersPlugin.Instance.Log.LogInfo($"Patching NetworkCuller Awake _playerMaxCount from {__instance._playerMaxCount} to {totalCapacity}");
+            __instance._playerMaxCount = totalCapacity;
         }
     }
 
@@ -132,15 +155,34 @@ namespace ASKAMorePlayers
     public static class NetworkCuller_Spawned_Patch
     {
         /// <summary>
-        /// A Harmony postfix patch that runs after the original <see cref="NetworkCuller.Spawned"/> method.
+        /// A Harmony prefix patch that runs before the original <see cref="NetworkCuller.Spawned"/> method.
         /// </summary>
         /// <param name="__instance">The instance of the NetworkCuller class. Harmony requires this specific name.</param>
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         // ReSharper disable once InconsistentNaming
-        public static void Postfix(NetworkCuller __instance)
+        public static void Prefix(NetworkCuller __instance)
         {
-            MorePlayersPlugin.Instance.Log.LogInfo($"Patching NetworkCuller _playerMaxCount from {__instance._playerMaxCount} to {MorePlayersPlugin.MaxPlayersConfig.Value}");
-            __instance._playerMaxCount = MorePlayersPlugin.MaxPlayersConfig.Value;
+            var maxPlayers = MorePlayersPlugin.GetMaxPlayersFromConfigFile();
+            var totalCapacity = maxPlayers + 1;
+            MorePlayersPlugin.Instance.Log.LogInfo($"Patching NetworkCuller Spawned _playerMaxCount from {__instance._playerMaxCount} to {totalCapacity}");
+            __instance._playerMaxCount = totalCapacity;
+        }
+    }
+    
+    /// <summary>
+    /// Patches the <see cref="NetworkHittable.Start"/> method to update its internal player count early.
+    /// </summary>
+    [HarmonyPatch(typeof(NetworkHittable), "Start")]
+    public static class NetworkHittable_Start_Patch
+    {
+        [HarmonyPrefix]
+        // ReSharper disable once InconsistentNaming
+        public static void Prefix(NetworkHittable __instance)
+        {
+            var maxPlayers = MorePlayersPlugin.GetMaxPlayersFromConfigFile();
+            var totalCapacity = maxPlayers + 1;
+            MorePlayersPlugin.Instance.Log.LogInfo($"Patching NetworkHittable Start _playerMaxCount from {__instance._playerMaxCount} to {totalCapacity}");
+            __instance._playerMaxCount = totalCapacity;
         }
     }
     
@@ -151,15 +193,17 @@ namespace ASKAMorePlayers
     public static class NetworkHittable_Spawned_Patch
     {
         /// <summary>
-        /// A Harmony postfix patch that runs after the original <see cref="NetworkHittable.Spawned"/> method.
+        /// A Harmony prefix patch that runs before the original <see cref="NetworkHittable.Spawned"/> method.
         /// </summary>
         /// <param name="__instance">The instance of the NetworkHittable class. Harmony requires this specific name.</param>
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         // ReSharper disable once InconsistentNaming
-        public static void Postfix(NetworkHittable __instance)
+        public static void Prefix(NetworkHittable __instance)
         {
-            MorePlayersPlugin.Instance.Log.LogInfo($"Patching NetworkHittable _playerMaxCount from {__instance._playerMaxCount} to {MorePlayersPlugin.MaxPlayersConfig.Value}");
-            __instance._playerMaxCount = MorePlayersPlugin.MaxPlayersConfig.Value;
+            var maxPlayers = MorePlayersPlugin.GetMaxPlayersFromConfigFile();
+            var totalCapacity = maxPlayers + 1;
+            MorePlayersPlugin.Instance.Log.LogInfo($"Patching NetworkHittable Spawned _playerMaxCount from {__instance._playerMaxCount} to {totalCapacity}");
+            __instance._playerMaxCount = totalCapacity;
         }
     }
 
