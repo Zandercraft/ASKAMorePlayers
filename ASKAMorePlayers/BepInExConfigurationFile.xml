@@ -1,6 +1,9 @@
 ﻿<Project>
   <PropertyGroup>
-    <!-- Path to your BepInEx installation. Adjust if you change profiles or paths. -->
-    <BepInExPath>$(AppData)\Roaming\r2modmanPlus-local\ASKA\profiles\Default\BepInEx</BepInExPath>
+    <!-- 
+      $(AppData) resolves to C:\Users\YOUR_USER\AppData\Roaming
+      So we just append the rest of the path.
+    -->
+    <BepInExPath>$(AppData)\r2modmanPlus-local\ASKA\profiles\Default\BepInEx</BepInExPath>
   </PropertyGroup>
 </Project>

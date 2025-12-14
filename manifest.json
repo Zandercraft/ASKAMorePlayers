@@ -1,9 +1,9 @@
 ﻿{
-    "name": "MorePlayers",
+    "name": "ASKAMorePlayers",
     "description": "Increases the maximum player limit in ASKA, allowing for more than 4 players.",
     "version_number": "1.0.0",
-    "website_url": "",
+    "website_url": "https://github.com/Zandercraft/ASKAMorePlayers",
     "dependencies": [
-        "BepInEx-BepInExPack_ASKA-5.4.21"
+        "BepInEx-BepInExPack_IL2CPP-6.0.738"
     ]
 }

@@ -1,54 +1,66 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"
-            Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')"/>
-    <PropertyGroup>
-        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-        <ProjectGuid>{9AABE1DB-777A-4A45-AFD0-55E326D13D07}</ProjectGuid>
-        <OutputType>Library</OutputType>
-        <AppDesignerFolder>Properties</AppDesignerFolder>
-        <RootNamespace>ASKAMorePlayers</RootNamespace>
-        <AssemblyName>ASKAMorePlayers</AssemblyName>
-        <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-        <FileAlignment>512</FileAlignment>
-    </PropertyGroup>
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-        <PlatformTarget>AnyCPU</PlatformTarget>
-        <DebugSymbols>true</DebugSymbols>
-        <DebugType>full</DebugType>
-        <Optimize>false</Optimize>
-        <OutputPath>bin\Debug\</OutputPath>
-        <DefineConstants>DEBUG;TRACE</DefineConstants>
-        <ErrorReport>prompt</ErrorReport>
-        <WarningLevel>4</WarningLevel>
-    </PropertyGroup>
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-        <PlatformTarget>AnyCPU</PlatformTarget>
-        <DebugType>pdbonly</DebugType>
-        <Optimize>true</Optimize>
-        <OutputPath>bin\Release\</OutputPath>
-        <DefineConstants>TRACE</DefineConstants>
-        <ErrorReport>prompt</ErrorReport>
-        <WarningLevel>4</WarningLevel>
-    </PropertyGroup>
-    <ItemGroup>
-        <Reference Include="System"/>
-        <Reference Include="System.Core"/>
-        <Reference Include="System.Data"/>
-        <Reference Include="System.Xml"/>
-    </ItemGroup>
-    <ItemGroup>
-        <Compile Include="Class1.cs"/>
-        <Compile Include="Properties\AssemblyInfo.cs"/>
-    </ItemGroup>
-    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
-    <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-         Other similar extension points exist, see Microsoft.Common.targets.
-    <Target Name="BeforeBuild">
-    </Target>
-    <Target Name="AfterBuild">
-    </Target>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Import your configuration file here. 
+       Condition="Exists(...)" prevents the project from breaking if the file is missing. -->
+  <Import Project="BepInExConfigurationFile.xml" Condition="Exists('BepInExConfigurationFile.xml')" />
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>ASKAMorePlayers</AssemblyName>
+    <Description>ASKA More Players Mod</Description>
+    <Version>1.0.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ASKAMorePlayers</RootNamespace>
+
+    <!-- Assembly Info -->
+    <Company>Zandercraft</Company>
+    <Product>ASKAMorePlayers</Product>
+    <Copyright>Copyright © Zandercraft 2025</Copyright>
+    <AssemblyTitle>ASKAMorePlayers</AssemblyTitle>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Core BepInEx References -->
+    <Reference Include="BepInEx.Core">
+      <HintPath>$(BepInExPath)\core\BepInEx.Core.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BepInEx.Unity.IL2CPP">
+      <HintPath>$(BepInExPath)\core\BepInEx.Unity.IL2CPP.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExPath)\core\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(BepInExPath)\core\Il2CppInterop.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Common">
+      <HintPath>$(BepInExPath)\core\Il2CppInterop.Common.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.HarmonySupport">
+      <HintPath>$(BepInExPath)\core\Il2CppInterop.HarmonySupport.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+
+    <!-- Game Interop Assemblies 
+         Using a wildcard to ensure we have access to all game types (Unity, Assembly-CSharp, etc.)
+         Private=False ensures we don't copy these huge files to our output folder.
     -->
+    <Reference Include="$(BepInExPath)\interop\*.dll">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Copy the built mod to the BepInEx plugins folder automatically -->
+  <Target Name="CopyMod" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExPath)\plugins\ASKAMorePlayers" />
+    <Copy SourceFiles="..\manifest.json" DestinationFolder="$(BepInExPath)\plugins\ASKAMorePlayers" />
+    <Message Text="Copied $(TargetFileName) and manifest.json to $(BepInExPath)\plugins\ASKAMorePlayers" Importance="High" />
+  </Target>
 
 </Project>
