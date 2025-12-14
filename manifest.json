@@ -1,0 +1,9 @@
+﻿{
+    "name": "MorePlayers",
+    "description": "Increases the maximum player limit in ASKA, allowing for more than 4 players.",
+    "version_number": "1.0.0",
+    "website_url": "",
+    "dependencies": [
+        "BepInEx-BepInExPack_ASKA-5.4.21"
+    ]
+}
